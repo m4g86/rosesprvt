@@ -1,1 +1,1 @@
-idk what is this
+EVADE SCRIPT HUB FOR AFK & PRO SERVER ONLY.
