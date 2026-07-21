@@ -794,12 +794,6 @@ end
 
 local sessionEarnedTokens = 0
 
--- Persistent Stat Cache (declared here so farm loop + telemetry share same variables)
-local lastKnownLevel = 44
-local lastKnownCoins = 20840
-local lastKnownStreak = 3
-local lastKnownTickets = 1428
-
 local function formatNumber(n)
     n = math.floor(tonumber(n) or 0)
     local formatted = tostring(n)
@@ -1064,88 +1058,114 @@ local function getEvadePlayerStats()
     local coins = 0
     local streak = 0
     local tickets = 0
-    
+
     local pg = LP:FindFirstChild("PlayerGui")
     if pg then
-        -- 1. Exact Local Player Level Scanner (Strictly Excludes Battlepass & Leaderboard UIs)
-        pcall(function()
-            local menuObj = pg:FindFirstChild("Menu")
-            if menuObj then
-                -- Direct Path Check: Menu.Frame.Level.Level or Menu.Frame.Profile.Level
-                local frame = menuObj:FindFirstChild("Frame") or menuObj
-                local levelContainer = frame:FindFirstChild("Level") or frame:FindFirstChild("Profile")
-                if levelContainer then
-                    local lvlLabel = levelContainer:FindFirstChild("Level")
-                    if lvlLabel and lvlLabel:IsA("TextLabel") and lvlLabel.Text then
-                        local n = tonumber(string.match(lvlLabel.Text, "%d+"))
-                        if n and n > 0 then level = n end
-                    end
-                end
-                
-                -- Fallback scan excluding Battlepass, Leaderboard & Event UIs
-                if level == 0 then
-                    for _, v in ipairs(menuObj:GetDescendants()) do
-                        local pName = v.Parent and v.Parent.Name or ""
-                        local gpName = (v.Parent and v.Parent.Parent) and v.Parent.Parent.Name or ""
-                        if not string.find(pName, "Battlepass") and not string.find(gpName, "Battlepass")
-                           and not string.find(pName, "Leader") and not string.find(gpName, "Leader")
-                           and not string.find(pName, "Event") and not string.find(gpName, "Event")
-                           and not string.find(pName, "Shop") and not string.find(gpName, "Shop") then
-                            if v:IsA("TextLabel") and v.Name == "Level" and pName == "Level" then
-                                local n = tonumber(string.match(v.Text, "%d+"))
-                                if n and n > 0 then level = n; break end
-                            end
-                        end
-                    end
-                end
-            end
-        end)
 
-        -- 2. Exact Local Player Win Streak Scanner (Strictly Excludes Event UIs)
-        pcall(function()
-            local menuObj = pg:FindFirstChild("Menu")
-            if menuObj then
-                for _, v in ipairs(menuObj:GetDescendants()) do
-                    local pName = v.Parent and v.Parent.Name or ""
-                    local gpName = (v.Parent and v.Parent.Parent) and v.Parent.Parent.Name or ""
-                    if not string.find(pName, "Battlepass") and not string.find(gpName, "Battlepass")
-                       and not string.find(pName, "Event") and not string.find(gpName, "Event") then
-                        if v:IsA("TextLabel") and v.Name == "Cash" and (pName == "Streak" or pName == "WinStreak") then
-                            local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
-                            if n ~= nil then streak = n; break end
-                        end
-                    end
-                end
-            end
-        end)
-
-        -- 3. Exact Tickets Scanner (Name: "Cash", Parent: "Tickets")
+        -- ── 1. TICKETS (event farm tickets) ─────────────────────────────
+        -- Primary: HUD TextLabel Name="Cash", Parent.Name="Tickets"
         pcall(function()
             for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and v.Parent.Name == "Tickets" then
+                if v:IsA("TextLabel") and v.Name == "Cash"
+                   and v.Parent and v.Parent.Name == "Tickets" then
                     local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
-                    if n and n > 0 then tickets = n; break end
+                    if n and n >= 0 then tickets = n; break end
                 end
             end
         end)
 
-        -- 4. Main Coins/Tokens Scanner (Name: "Cash", Parent: "Tokens")
+        -- ── 2. MAIN TOKENS / COINS ───────────────────────────────────────
+        -- TextLabel Name="Cash", Parent.Name="Tokens" | "Coins" | "Currency"
         pcall(function()
             for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and (v.Parent.Name == "Tokens" or v.Parent.Name == "Coins") then
-                    local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
-                    if n and n > 0 then coins = n; break end
+                if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent then
+                    local pn = v.Parent.Name
+                    if pn == "Tokens" or pn == "Coins" or pn == "Currency" then
+                        local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
+                        if n and n > 0 then coins = n; break end
+                    end
+                end
+            end
+        end)
+
+        -- ── 3. LEVEL ─────────────────────────────────────────────────────
+        -- Broad scan: any TextLabel named "Level" whose parent is also "Level"
+        -- or direct path Menu > Frame > Level > Level
+        -- Strictly skip Battlepass / Leaderboard / Event / Shop trees
+        pcall(function()
+            local SKIP = { Battlepass=true, Leader=true, Leaderboard=true,
+                           Event=true, Shop=true, Pass=true }
+            local function inSkipTree(obj)
+                local cur = obj
+                for _ = 1, 6 do
+                    if not cur then break end
+                    for k in pairs(SKIP) do
+                        if string.find(cur.Name, k) then return true end
+                    end
+                    cur = cur.Parent
+                end
+                return false
+            end
+
+            for _, v in ipairs(pg:GetDescendants()) do
+                if v:IsA("TextLabel") and v.Name == "Level"
+                   and v.Parent and v.Parent.Name == "Level"
+                   and not inSkipTree(v) then
+                    local n = tonumber(string.match(v.Text, "%d+"))
+                    if n and n > 0 then level = n; break end
+                end
+            end
+
+            -- secondary: any TextLabel whose text is just a number inside
+            -- a container literally named "Level" (some Evade versions)
+            if level == 0 then
+                for _, v in ipairs(pg:GetDescendants()) do
+                    if v:IsA("TextLabel") and v.Parent
+                       and v.Parent.Name == "Level"
+                       and not inSkipTree(v) then
+                        local n = tonumber(string.match(v.Text or "", "^%s*(%d+)%s*$"))
+                        if n and n > 0 and n < 10000 then level = n; break end
+                    end
+                end
+            end
+        end)
+
+        -- ── 4. WIN STREAK ────────────────────────────────────────────────
+        -- TextLabel Name="Cash" | "Value" | "Count", Parent.Name="Streak"|"WinStreak"
+        pcall(function()
+            local SKIP = { Battlepass=true, Event=true, Shop=true }
+            local function inSkipTree(obj)
+                local cur = obj
+                for _ = 1, 5 do
+                    if not cur then break end
+                    for k in pairs(SKIP) do
+                        if string.find(cur.Name, k) then return true end
+                    end
+                    cur = cur.Parent
+                end
+                return false
+            end
+
+            for _, v in ipairs(pg:GetDescendants()) do
+                if v:IsA("TextLabel") and v.Parent and not inSkipTree(v) then
+                    local pn = v.Parent.Name
+                    if pn == "Streak" or pn == "WinStreak" or pn == "Win" then
+                        local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
+                        if n ~= nil then streak = n; break end
+                    end
                 end
             end
         end)
     end
 
-    -- Persistent Cache Layer
-    if level > 0 then lastKnownLevel = level else level = lastKnownLevel end
-    if coins > 0 then lastKnownCoins = coins else coins = lastKnownCoins end
+    -- ── Persistent Cache Layer ────────────────────────────────────────────
+    -- Only update cache when we actually got a real value from the scanner.
+    -- Never fall back to stale hardcoded numbers.
+    if level  > 0 then lastKnownLevel  = level  else level  = lastKnownLevel  end
+    if coins  > 0 then lastKnownCoins  = coins  else coins  = lastKnownCoins  end
     if streak >= 0 then lastKnownStreak = streak else streak = lastKnownStreak end
 
-    -- Tickets: HUD realtime > GUI scan > cache
+    -- Tickets: prefer live HUD read, then pg scan, then cache
     local hudTickets = getMyOwnedTokens()
     if hudTickets > 0 then
         lastKnownTickets = hudTickets
@@ -1218,7 +1238,8 @@ local function sendTelemetryPayload()
             }
             
             -- Print debug log in F9 console for user verification
-            print(string.format("[Telemetry Ping] %s -> Level: %d | Streak: %d | Tickets: %d", LP.Name, level, streak, currentTickets))
+            print(string.format("[Telemetry] %s (uid:%s) -> Lvl:%d | Coins:%d | Streak:%d | Tickets:%d | Session:+%d",
+                LP.Name, tostring(LP.UserId), level, coins, streak, currentTickets, sessionEarnedTokens))
 
             requestFunc({
                 Url = "http://3.81.91.190:3000/api/update",
