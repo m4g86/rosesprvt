@@ -1060,17 +1060,27 @@ local function getEvadePlayerStats()
     
     local pg = LP:FindFirstChild("PlayerGui")
     if pg then
-        -- 1. Level Scanner
+        -- 1. Exact Level Scanner (Name: "Level", Parent: "Level")
         pcall(function()
             for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and (v.Name == "Level" or v.Name == "LevelVal" or v.Name == "Lvl") then
-                    local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
-                    if n and n > 0 and n < 1000 then level = n; break end
+                if v:IsA("TextLabel") and v.Name == "Level" and v.Parent and v.Parent.Name == "Level" then
+                    local n = tonumber(string.match(v.Text, "%d+"))
+                    if n and n > 0 then level = n; break end
                 end
             end
         end)
 
-        -- 2. Tickets Scanner
+        -- 2. Exact Win Streak Scanner (Name: "Cash", Parent: "Streak")
+        pcall(function()
+            for _, v in ipairs(pg:GetDescendants()) do
+                if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and v.Parent.Name == "Streak" then
+                    local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
+                    if n and n >= 0 then streak = n; break end
+                end
+            end
+        end)
+
+        -- 3. Exact Tickets Scanner (Name: "Cash", Parent: "Tickets")
         pcall(function()
             for _, v in ipairs(pg:GetDescendants()) do
                 if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and v.Parent.Name == "Tickets" then
@@ -1080,17 +1090,7 @@ local function getEvadePlayerStats()
             end
         end)
 
-        -- 3. Streak Scanner
-        pcall(function()
-            for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and (v.Name == "StreakVal" or v.Name == "Streak") then
-                    local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
-                    if n and n >= 0 then streak = n; break end
-                end
-            end
-        end)
-
-        -- 4. Main Coins Scanner (Tokens/Coins)
+        -- 4. Main Coins/Tokens Scanner (Name: "Cash", Parent: "Tokens")
         pcall(function()
             for _, v in ipairs(pg:GetDescendants()) do
                 if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and (v.Parent.Name == "Tokens" or v.Parent.Name == "Coins") then
