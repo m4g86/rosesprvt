@@ -78,6 +78,10 @@ local function createSkyPlatform()
     return part
 end
 
+-- Create platform on load & lock default safePos
+local defaultPlt = createSkyPlatform()
+local safePos = CFrame.new(CUSTOM_SAFE_POS + Vector3.new(0, 4, 0))
+
 -- ===================== GUI SETUP =====================
 local gui = Instance.new("ScreenGui")
 gui.Name = "TokenFarmGUI"
@@ -1004,6 +1008,10 @@ btnStart, gradStart, strokeStart, lblStart, textStrokeStart, hlStart = createEva
             textStrokeStart.Color = Color3.fromRGB(115, 18, 18)
             hlStart.Color = Color3.fromRGB(90, 18, 18)
             setStatus("Farm Running!", Color3.fromRGB(100, 255, 140), 1.8)
+            local hrp = getHRP()
+            if hrp and safePos then
+                hrp.CFrame = safePos
+            end
             task.spawn(runFarm)
         else
             lblStart.Text = "START"
