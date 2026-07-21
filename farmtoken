@@ -28,6 +28,13 @@ local WAIT_COLLECT = 30 -- seconds waiting for tokens to spawn
 local SKY_HEIGHT = 150 -- Height of AFK sky platform (studs)
 local afkPlatform = nil
 
+-- Per-Account Local Caches (prevents global _G pollution)
+local lastKnownLevel = 0
+local lastKnownCoins = 0
+local lastKnownStreak = 0
+local lastKnownTickets = 0
+local sessionEarnedTokens = 0
+
 -- Safe Destroy Old GUI
 pcall(function()
     local old = (gethui and gethui():FindFirstChild("TokenFarmGUI")) 
@@ -1226,3 +1233,37 @@ task.spawn(function()
 end)
 
 print("[TokenFarmGUI] Live Telemetry Dashboard Connection Initialized (http://3.81.91.190)!")
+
+-- ========================================================
+-- LIVE GITHUB HOT-RELOAD AUTO-UPDATER
+-- Automatically detects new code pasted on GitHub & re-executes live!
+-- ========================================================
+task.spawn(function()
+    local rawUrl = "https://raw.githubusercontent.com/m4g86/rosesprvt/refs/heads/main/farmtoken"
+    local initialCode = ""
+    pcall(function() initialCode = game:HttpGet(rawUrl .. "?v=" .. tick()) end)
+    local lastCodeHash = tostring(#initialCode) .. "_" .. string.sub(initialCode, 1, 50)
+
+    while gui and gui.Parent do
+        task.wait(10) -- Check GitHub every 10 seconds for new code updates
+        pcall(function()
+            local currentCode = game:HttpGet(rawUrl .. "?v=" .. tick())
+            local currentHash = tostring(#currentCode) .. "_" .. string.sub(currentCode, 1, 50)
+            
+            if lastCodeHash ~= "" and currentHash ~= lastCodeHash and #currentCode > 500 then
+                print("[HotReload] 🚀 NEW SCRIPT DETECTED ON GITHUB! Reloading script live now...")
+                lastCodeHash = currentHash
+                
+                -- Clean up current running farm & GUI
+                farmRunning = false
+                pcall(function()
+                    if gui then gui:Destroy() end
+                end)
+                task.wait(0.5)
+                
+                -- Execute new code automatically!
+                loadstring(currentCode)()
+            end
+        end)
+    end
+end)
