@@ -49,8 +49,8 @@ getgenv().EvadeAntiAFKConn = LP.Idled:Connect(function()
     print("[TokenFarmGUI] Anti-AFK: Kept connection active!")
 end)
 
--- Helper Floating Platform (AFK Spot Custom Position)
-local CUSTOM_SAFE_POS = Vector3.new(-444.1, 230.8, -630.4)
+-- Helper Floating Platform (AFK Spot Custom Position - Original Sky Spot 500 studs)
+local CUSTOM_SAFE_POS = Vector3.new(0, 500, 0)
 
 local function createSkyPlatform()
     local existing = Workspace:FindFirstChild("EvadeAFKSkyPlatform")
