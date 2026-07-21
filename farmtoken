@@ -23,6 +23,7 @@ end
 -- State
 local safePos = nil
 local farmRunning = false
+local farmStartTime = 0
 local WAIT_COLLECT = 30 -- seconds waiting for tokens to spawn
 local SKY_HEIGHT = 150 -- Height of AFK sky platform (studs)
 local afkPlatform = nil
@@ -1149,7 +1150,6 @@ local requestFunc = request
                  or (http and http.request) 
                  or (fluxus and fluxus.request) 
                  or (krnl and krnl.request)
-local farmStartTime = 0
 
 local function sendTelemetryPayload()
     pcall(function()
