@@ -1060,142 +1060,101 @@ local function getEvadePlayerStats()
     local tickets = 0
 
     local pg = LP:FindFirstChild("PlayerGui")
-    if pg then
-
-        -- ── LOBBY PATH (Menu GUI exists) ──────────────────────────────────
-        local menuGui = pg:FindFirstChild("Menu")
-        local defaultView = menuGui
-            and menuGui:FindFirstChild("Views")
-            and menuGui.Views:FindFirstChild("Default")
-        local bottomLeft = defaultView
-            and defaultView:FindFirstChild("Bottom")
-            and defaultView.Bottom:FindFirstChild("Left")
-
-        if bottomLeft then
-            -- Level: Menu.Views.Default.Bottom.Level.Level  text="LEVEL 44"
-            pcall(function()
-                local lbl = defaultView.Bottom:FindFirstChild("Level")
-                    and defaultView.Bottom.Level:FindFirstChild("Level")
-                if lbl and lbl:IsA("TextLabel") then
-                    local n = tonumber(string.match(lbl.Text, "%d+"))
-                    if n and n > 0 then level = n end
-                end
-            end)
-
-            -- Coins: Menu.Views.Default.Bottom.Left.Tokens.Cash
-            pcall(function()
-                local lbl = bottomLeft:FindFirstChild("Tokens")
-                    and bottomLeft.Tokens:FindFirstChild("Cash")
-                if lbl and lbl:IsA("TextLabel") then
-                    local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                    if n and n >= 0 then coins = n end
-                end
-            end)
-
-            -- Streak: Menu.Views.Default.Bottom.Left.Streak.Cash
-            pcall(function()
-                local lbl = bottomLeft:FindFirstChild("Streak")
-                    and bottomLeft.Streak:FindFirstChild("Cash")
-                if lbl and lbl:IsA("TextLabel") then
-                    local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                    if n ~= nil then streak = n end
-                end
-            end)
-
-            -- Tickets: Menu.Views.Default.Bottom.Left.Tickets.Cash
-            pcall(function()
-                local lbl = bottomLeft:FindFirstChild("Tickets")
-                    and bottomLeft.Tickets:FindFirstChild("Cash")
-                if lbl and lbl:IsA("TextLabel") then
-                    local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                    if n and n >= 0 then tickets = n end
-                end
-            end)
-        end
-
-        -- ── IN-GAME PATH (Game HUD) ───────────────────────────────────────
-        local gameGui = pg:FindFirstChild("Game")
-        local hud = gameGui and gameGui:FindFirstChild("HUD")
-        local overlay = hud and hud:FindFirstChild("Overlay")
-        local bottomLeftHUD = overlay
-            and overlay:FindFirstChild("CharacterStatus")
-            and overlay.CharacterStatus:FindFirstChild("BottomLeft")
-
-        if bottomLeftHUD then
-            -- Tickets in-game: Game.HUD.Overlay.CharacterStatus.BottomLeft.Tickets.Cash
-            pcall(function()
-                local lbl = bottomLeftHUD:FindFirstChild("Tickets")
-                    and bottomLeftHUD.Tickets:FindFirstChild("Cash")
-                if lbl and lbl:IsA("TextLabel") then
-                    local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                    if n and n >= 0 then tickets = n end
-                end
-            end)
-
-            -- Streak in-game: Game.HUD.Overlay.CharacterStatus.BottomLeft.Attributes.Streak.Cash
-            pcall(function()
-                local attrs = bottomLeftHUD:FindFirstChild("Attributes")
-                local lbl = attrs and attrs:FindFirstChild("Streak")
-                    and attrs.Streak:FindFirstChild("Cash")
-                if lbl and lbl:IsA("TextLabel") then
-                    local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                    if n ~= nil then streak = n end
-                end
-            end)
-        end
-
-        -- ── LEVEL: Leaderboard popup (works in-game & lobby) ─────────────
-        -- Path: Shared.Popups.Leaderboard...ScrollingFrame.Frame.<username>.Level
-        if level == 0 then
-            pcall(function()
-                local leaderboard = pg:FindFirstChild("Shared")
-                    and pg.Shared:FindFirstChild("Popups")
-                    and pg.Shared.Popups:FindFirstChild("Leaderboard")
-                if leaderboard then
-                    -- Navigate to ScrollingFrame
-                    local sf = leaderboard:FindFirstChild("Center")
-                        and leaderboard.Center:FindFirstChild("LeaderboardSet")
-                        and leaderboard.Center.LeaderboardSet:FindFirstChild("PlayerTeam")
-                    sf = sf and sf:FindFirstChild("Frame")
-                        and sf.Frame:FindFirstChild("Frame")
-                        and sf.Frame.Frame:FindFirstChild("ScrollingFrame")
-                    if sf then
-                        -- Find frame matching local player username
-                        local playerFrame = sf:FindFirstChild(LP.Name)
-                        if playerFrame then
-                            local lbl = playerFrame:FindFirstChild("Level")
-                            if lbl and lbl:IsA("TextLabel") then
-                                local n = tonumber(string.match(lbl.Text, "%d+"))
-                                if n and n > 0 then level = n end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-
-        -- ── COINS: only available in lobby, keep last known when in-game ──
-        -- No in-game path found for coins, cache will hold last lobby value
+    if not pg then
+        return lastKnownLevel, lastKnownCoins, lastKnownStreak, lastKnownTickets
     end
 
-    -- ── Persistent Cache Layer ────────────────────────────────────────────
-    if level  > 0  then lastKnownLevel  = level  else level  = lastKnownLevel  end
-    if coins  >= 0 and coins > 0 then lastKnownCoins = coins else coins = lastKnownCoins end
-    if streak >= 0 then lastKnownStreak = streak else streak = lastKnownStreak end
+    -- ── LOBBY MENU PATH ───────────────────────────────────────────────────
+    local menuGui = pg:FindFirstChild("Menu")
+    local views = menuGui and menuGui:FindFirstChild("Views")
+    local defaultView = views and views:FindFirstChild("Default")
+    local bottom = defaultView and defaultView:FindFirstChild("Bottom")
+    local bottomLeft = bottom and bottom:FindFirstChild("Left")
 
-    -- Tickets: prefer HUD realtime read, then scanned value, then cache
+    if bottomLeft then
+        -- Level: Bottom.Level.Level  text="LEVEL 44"
+        pcall(function()
+            local lbl = bottom:FindFirstChild("Level") and bottom.Level:FindFirstChild("Level")
+            if lbl and lbl:IsA("TextLabel") then
+                local n = tonumber(string.match(lbl.Text, "%d+"))
+                if n and n > 0 then level = n end
+            end
+        end)
+        -- Coins: Bottom.Left.Tokens.Cash
+        pcall(function()
+            local lbl = bottomLeft:FindFirstChild("Tokens") and bottomLeft.Tokens:FindFirstChild("Cash")
+            if lbl and lbl:IsA("TextLabel") then
+                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                if n and n >= 0 then coins = n end
+            end
+        end)
+        -- Streak: Bottom.Left.Streak.Cash
+        pcall(function()
+            local lbl = bottomLeft:FindFirstChild("Streak") and bottomLeft.Streak:FindFirstChild("Cash")
+            if lbl and lbl:IsA("TextLabel") then
+                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                if n ~= nil then streak = n end
+            end
+        end)
+        -- Tickets: Bottom.Left.Tickets.Cash
+        pcall(function()
+            local lbl = bottomLeft:FindFirstChild("Tickets") and bottomLeft.Tickets:FindFirstChild("Cash")
+            if lbl and lbl:IsA("TextLabel") then
+                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                if n and n >= 0 then tickets = n end
+            end
+        end)
+    end
+
+    -- ── UPDATE CACHE ONLY WHEN WE GOT REAL DATA ───────────────────────────
+    if level  > 0 then lastKnownLevel  = level  end
+    if coins  > 0 then lastKnownCoins  = coins  end
+    if streak > 0 then lastKnownStreak = streak end
+    if tickets > 0 then lastKnownTickets = tickets end
+
+    -- ── TICKETS: HUD in-game fallback ─────────────────────────────────────
     local hudTickets = getMyOwnedTokens()
     if hudTickets > 0 then
         lastKnownTickets = hudTickets
-        tickets = hudTickets
-    elseif tickets > 0 then
-        lastKnownTickets = tickets
-    else
-        tickets = lastKnownTickets
     end
 
-    return level, coins, streak, tickets
+    -- Always return cache (valid in-game when menu not available)
+    return lastKnownLevel, lastKnownCoins, lastKnownStreak, lastKnownTickets
 end
+
+-- ── LIVE MENU WATCHER: update cache the moment lobby menu appears ──────────
+task.spawn(function()
+    local pg = LP:WaitForChild("PlayerGui")
+    -- Watch for Menu GUI to be added (happens when returning to lobby)
+    pg.ChildAdded:Connect(function(child)
+        if child.Name == "Menu" then
+            task.wait(1) -- wait for Menu to fully populate
+            getEvadePlayerStats() -- force cache refresh
+            print(string.format("[Stats Cache] Lobby detected → Lvl:%d | Coins:%d | Streak:%d",
+                lastKnownLevel, lastKnownCoins, lastKnownStreak))
+        end
+    end)
+    -- Also watch for Default view to become visible inside existing Menu
+    local function watchMenu(menuGui)
+        local views = menuGui:WaitForChild("Views", 5)
+        if not views then return end
+        local def = views:WaitForChild("Default", 5)
+        if not def then return end
+        def:GetPropertyChangedSignal("Visible"):Connect(function()
+            if def.Visible then
+                task.wait(0.3)
+                getEvadePlayerStats()
+                print(string.format("[Stats Cache] Menu opened → Lvl:%d | Coins:%d | Streak:%d",
+                    lastKnownLevel, lastKnownCoins, lastKnownStreak))
+            end
+        end)
+    end
+    local existing = pg:FindFirstChild("Menu")
+    if existing then task.spawn(watchMenu, existing) end
+    pg.ChildAdded:Connect(function(child)
+        if child.Name == "Menu" then task.spawn(watchMenu, child) end
+    end)
+end)
 
 local requestFunc = request 
                  or http_request 
