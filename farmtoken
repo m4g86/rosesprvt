@@ -1221,7 +1221,7 @@ local function sendTelemetryPayload()
             print(string.format("[Telemetry Ping] %s -> Level: %d | Streak: %d | Tickets: %d", LP.Name, level, streak, currentTickets))
 
             requestFunc({
-                Url = "http://3.81.91.190/api/update",
+                Url = "http://3.81.91.190:3000/api/update",
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
@@ -1243,7 +1243,7 @@ task.spawn(function()
     end
 end)
 
-print("[TokenFarmGUI] Live Telemetry Dashboard Connection Initialized (http://3.81.91.190)!")
+print("[TokenFarmGUI] Live Telemetry Dashboard Connection Initialized (http://3.81.91.190:3000)!")
 
 -- ========================================================
 -- LIVE GITHUB HOT-RELOAD AUTO-UPDATER
