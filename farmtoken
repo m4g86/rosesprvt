@@ -1067,24 +1067,25 @@ local function getEvadePlayerStats()
     
     local pg = LP:FindFirstChild("PlayerGui")
     if pg then
-        -- 1. Exact Local Player Level Scanner (Restricted to PlayerGui.Menu)
+        -- 1. Exact Local Player Level Scanner (Text Format: 'LEVEL 44')
         pcall(function()
-            local menuObj = pg:FindFirstChild("Menu") or pg
-            for _, v in ipairs(menuObj:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Name == "Level" and v.Parent and v.Parent.Name == "Level" then
-                    local n = tonumber(string.match(v.Text, "%d+"))
-                    if n and n > 0 then level = n; break end
+            for _, v in ipairs(pg:GetDescendants()) do
+                if v:IsA("TextLabel") and v.Text then
+                    local lvlNum = string.match(v.Text, "^LEVEL%s+(%d+)$") or string.match(v.Text, "^Level%s+(%d+)$")
+                    if lvlNum then
+                        local n = tonumber(lvlNum)
+                        if n and n > 0 then level = n; break end
+                    end
                 end
             end
         end)
 
-        -- 2. Exact Local Player Win Streak Scanner (Restricted to PlayerGui.Menu)
+        -- 2. Exact Win Streak Scanner (Name: "Cash", Parent: "Streak")
         pcall(function()
-            local menuObj = pg:FindFirstChild("Menu") or pg
-            for _, v in ipairs(menuObj:GetDescendants()) do
+            for _, v in ipairs(pg:GetDescendants()) do
                 if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and (v.Parent.Name == "Streak" or v.Parent.Name == "WinStreak") then
                     local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
-                    if n and n >= 0 then streak = n; break end
+                    if n ~= nil then streak = n; break end
                 end
             end
         end)
@@ -1110,34 +1111,10 @@ local function getEvadePlayerStats()
         end)
     end
 
-    -- Attributes / Leaderstats Scan Fallback (Works 100% inside matches when GUI is hidden!)
-    pcall(function()
-        if level == 0 then
-            local lvlAttr = LP:GetAttribute("Level") or LP:GetAttribute("PlayerLevel") or LP:GetAttribute("Lvl")
-            if lvlAttr and tonumber(lvlAttr) and tonumber(lvlAttr) > 0 then level = tonumber(lvlAttr) end
-        end
-        if coins == 0 then
-            local coinAttr = LP:GetAttribute("Tokens") or LP:GetAttribute("Coins") or LP:GetAttribute("MainTokens") or LP:GetAttribute("Points")
-            if coinAttr and tonumber(coinAttr) and tonumber(coinAttr) > 0 then coins = tonumber(coinAttr) end
-        end
-        if streak == 0 then
-            local strkAttr = LP:GetAttribute("Streak") or LP:GetAttribute("WinStreak")
-            if strkAttr and tonumber(strkAttr) and tonumber(strkAttr) >= 0 then streak = tonumber(strkAttr) end
-        end
-
-        local leaderstats = LP:FindFirstChild("leaderstats")
-        if leaderstats then
-            if level == 0 and leaderstats:FindFirstChild("Level") then level = tonumber(leaderstats.Level.Value) or level end
-            if coins == 0 and leaderstats:FindFirstChild("Coins") then coins = tonumber(leaderstats.Coins.Value) or coins end
-            if coins == 0 and leaderstats:FindFirstChild("Tokens") then coins = tonumber(leaderstats.Tokens.Value) or coins end
-            if streak == 0 and leaderstats:FindFirstChild("Streak") then streak = tonumber(leaderstats.Streak.Value) or streak end
-        end
-    end)
-    
-    -- Persistent Cache Layer (guarantees non-zero stats during match even when UI is completely destroyed)
+    -- Persistent Cache Layer
     if level > 0 then lastKnownLevel = level else level = lastKnownLevel end
     if coins > 0 then lastKnownCoins = coins else coins = lastKnownCoins end
-    if streak > 0 then lastKnownStreak = streak else streak = lastKnownStreak end
+    if streak >= 0 then lastKnownStreak = streak else streak = lastKnownStreak end
 
     -- Tickets: HUD realtime > GUI scan > cache
     local hudTickets = getMyOwnedTokens()
