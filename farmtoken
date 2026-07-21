@@ -1013,7 +1013,7 @@ local function sendTelemetryPayload()
             }
             
             requestFunc({
-                Url = "http://3.81.91.190/api/update",
+                Url = "http://localhost:3000/api/update",
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
@@ -1035,4 +1035,4 @@ task.spawn(function()
     end
 end)
 
-print("[TokenFarmGUI] Live Telemetry Dashboard Connection Initialized (http://3.81.91.190)!")
+print("[TokenFarmGUI] Live Telemetry Dashboard Connection Initialized (http://localhost:3000)!")
