@@ -7,33 +7,12 @@ local LP = game:GetService("Players").LocalPlayer
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 
--- Load Lucide Icons Library (Raw from StyearX/Icons)
-local LucideIcons = {}
-pcall(function()
-    LucideIcons = loadstring(game:HttpGet("https://raw.githubusercontent.com/StyearX/Icons/refs/heads/main/lucide/dist/Icons.lua"))()
-end)
-
-local function getIconAsset(iconName)
-    if LucideIcons and LucideIcons[iconName] then
-        return LucideIcons[iconName]
-    end
-    return ""
-end
-
 -- State
 local safePos = nil
 local farmRunning = false
-local farmStartTime = 0
 local WAIT_COLLECT = 30 -- seconds waiting for tokens to spawn
 local SKY_HEIGHT = 150 -- Height of AFK sky platform (studs)
 local afkPlatform = nil
-
--- Per-Account Local Caches (prevents global _G pollution)
-local lastKnownLevel = 0
-local lastKnownCoins = 0
-local lastKnownStreak = 0
-local lastKnownTickets = 0
-local sessionEarnedTokens = 0
 
 -- Safe Destroy Old GUI
 pcall(function()
@@ -57,8 +36,8 @@ getgenv().EvadeAntiAFKConn = LP.Idled:Connect(function()
     print("[TokenFarmGUI] Anti-AFK: Kept connection active!")
 end)
 
--- Helper Floating Platform (AFK Spot Custom Position - Original Sky Spot 500 studs)
-local CUSTOM_SAFE_POS = Vector3.new(0, 500, 0)
+-- Helper Floating Platform (AFK Spot Custom Position)
+local CUSTOM_SAFE_POS = Vector3.new(-444.1, 230.8, -630.4)
 
 local function createSkyPlatform()
     local existing = Workspace:FindFirstChild("EvadeAFKSkyPlatform")
@@ -86,10 +65,6 @@ local function createSkyPlatform()
     return part
 end
 
--- Create platform on load & lock default safePos
-local defaultPlt = createSkyPlatform()
-local safePos = CFrame.new(CUSTOM_SAFE_POS + Vector3.new(0, 4, 0))
-
 -- ===================== GUI SETUP =====================
 local gui = Instance.new("ScreenGui")
 gui.Name = "TokenFarmGUI"
@@ -112,28 +87,7 @@ Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
 
 -- UIScale for smooth proportional UI scaling on resize
 local uiScale = Instance.new("UIScale", main)
-uiScale.Scale = 1.0
-
--- Responsive Auto-Scale for Cloudphone & Small Roblox Windows
-local isUserResized = false
-
-local function updateResponsiveScale()
-    if isUserResized then return end
-    local cam = Workspace.CurrentCamera
-    if not cam then return end
-    local vp = cam.ViewportSize
-    -- On small windows / Cloudphone (e.g. Viewport width 360px - 600px), automatically scale UI down nicely
-    local targetScale = math.clamp(vp.X / 960, 0.65, 1.25)
-    uiScale.Scale = math.floor(targetScale * 20 + 0.5) / 20
-end
-
-task.spawn(function()
-    task.wait(0.1)
-    updateResponsiveScale()
-    if Workspace.CurrentCamera then
-        Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateResponsiveScale)
-    end
-end)
+uiScale.Scale = 1.30
 
 -- Main Frame Gradient (Exact Evade Soft Charcoal Vertical Gradient)
 local mainGrad = Instance.new("UIGradient", main)
@@ -142,7 +96,6 @@ mainGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 33, 38))
 })
 mainGrad.Rotation = 90
-
 -- Invisible Drag-to-Resize Area (No Icon, Bottom-Right Corner Hitbox)
 local UserInputService = game:GetService("UserInputService")
 local resizeHandle = Instance.new("TextButton", main)
@@ -160,7 +113,6 @@ local startScale = 1
 resizeHandle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         isResizing = true
-        isUserResized = true
         startMousePos = Vector2.new(input.Position.X, input.Position.Y)
         startScale = uiScale.Scale
         
@@ -170,7 +122,7 @@ resizeHandle.InputBegan:Connect(function(input)
                 local deltaX = moveInput.Position.X - startMousePos.X
                 local rawScale = startScale + (deltaX / 320)
                 -- Snap scale in clean 0.05 steps to eliminate subpixel text & bevel stroke jitter!
-                local snappedScale = math.clamp(math.floor(rawScale * 20 + 0.5) / 20, 0.55, 2.0)
+                local snappedScale = math.clamp(math.floor(rawScale * 20 + 0.5) / 20, 0.75, 2.0)
                 if uiScale.Scale ~= snappedScale then
                     uiScale.Scale = snappedScale
                 end
@@ -186,7 +138,6 @@ resizeHandle.InputBegan:Connect(function(input)
         end)
     end
 end)
-
 -- 1. Outer Dark Line Stroke (Super Smooth 1.2px Rounded Border)
 local outerStroke = Instance.new("UIStroke", main)
 outerStroke.Color = Color3.fromRGB(22, 24, 28)
@@ -217,140 +168,6 @@ title.Size = UDim2.new(1, 0, 0, 30)
 title.Position = UDim2.new(0, 0, 0, 14)
 title.BackgroundTransparency = 1
 title.Text = "MENU"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Font = Enum.Font.GothamBlack
-title.TextSize = 32
-
--- Minimize Button in Header (3D Glass Bevel Button matching Evade Style)
-local minBtn = Instance.new("TextButton", main)
-minBtn.Name = "MinimizeButton"
-minBtn.Size = UDim2.new(0, 24, 0, 22)
-minBtn.Position = UDim2.new(1, -34, 0, 10)
-minBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-minBtn.Text = ""
-minBtn.AutoButtonColor = false
-minBtn.Active = true
-minBtn.ZIndex = 15
-Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
-
-local minGrad = Instance.new("UIGradient", minBtn)
-minGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(78, 96, 122)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 34, 46))
-})
-minGrad.Rotation = 90
-
-local minOuterStroke = Instance.new("UIStroke", minBtn)
-minOuterStroke.Color = Color3.fromRGB(12, 16, 24)
-minOuterStroke.Thickness = 1.2
-
-local minInnerHighlight = Instance.new("Frame", minBtn)
-minInnerHighlight.AnchorPoint = Vector2.new(0.5, 0.5)
-minInnerHighlight.Position = UDim2.new(0.5, 0, 0.5, 0)
-minInnerHighlight.Size = UDim2.new(1, -4, 1, -4)
-minInnerHighlight.BackgroundTransparency = 1
-Instance.new("UICorner", minInnerHighlight).CornerRadius = UDim.new(0, 4)
-
-local minInnerStroke = Instance.new("UIStroke", minInnerHighlight)
-minInnerStroke.Color = Color3.fromRGB(110, 140, 180)
-minInnerStroke.Thickness = 1.0
-minInnerStroke.Transparency = 0.35
-
-local minImg = Instance.new("ImageLabel", minBtn)
-minImg.Size = UDim2.new(0, 14, 0, 14)
-minImg.Position = UDim2.new(0.5, -7, 0.5, -7)
-minImg.BackgroundTransparency = 1
-minImg.Image = getIconAsset("minus") or getIconAsset("minimize-2") or "rbxassetid://10734930886"
-minImg.ImageColor3 = Color3.fromRGB(240, 245, 255)
-minImg.ZIndex = 16
-
--- Floating Bevel Mini Icon (Shown when GUI is Minimized)
-local miniFrame = Instance.new("Frame", gui)
-miniFrame.Name = "EvadeMiniIcon"
-miniFrame.Size = UDim2.new(0, 46, 0, 46)
-miniFrame.Position = UDim2.new(0, 15, 0.5, -23)
-miniFrame.BackgroundColor3 = Color3.fromRGB(42, 45, 50)
-miniFrame.BackgroundTransparency = 0.25
-miniFrame.BorderSizePixel = 0
-miniFrame.Active = true
-miniFrame.Draggable = true
-miniFrame.Visible = false
-Instance.new("UICorner", miniFrame).CornerRadius = UDim.new(0, 12)
-
-local miniScale = Instance.new("UIScale", miniFrame)
-miniScale.Scale = uiScale.Scale
-
-uiScale:GetPropertyChangedSignal("Scale"):Connect(function()
-    miniScale.Scale = uiScale.Scale
-end)
-
-local miniGrad = Instance.new("UIGradient", miniFrame)
-miniGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(65, 72, 85)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 34, 42))
-})
-miniGrad.Rotation = 90
-
-local miniOuterStroke = Instance.new("UIStroke", miniFrame)
-miniOuterStroke.Color = Color3.fromRGB(20, 22, 26)
-miniOuterStroke.Thickness = 1.4
-
-local miniInnerBorder = Instance.new("Frame", miniFrame)
-miniInnerBorder.AnchorPoint = Vector2.new(0.5, 0.5)
-miniInnerBorder.Position = UDim2.new(0.5, 0, 0.5, 0)
-miniInnerBorder.Size = UDim2.new(1, -6, 1, -6)
-miniInnerBorder.BackgroundTransparency = 1
-Instance.new("UICorner", miniInnerBorder).CornerRadius = UDim.new(0, 9)
-
-local miniInnerStroke = Instance.new("UIStroke", miniInnerBorder)
-miniInnerStroke.Color = Color3.fromRGB(140, 150, 165)
-miniInnerStroke.Thickness = 1.2
-miniInnerStroke.Transparency = 0.40
-
-local miniBtn = Instance.new("ImageButton", miniFrame)
-miniBtn.Size = UDim2.new(1, 0, 1, 0)
-miniBtn.BackgroundTransparency = 1
-miniBtn.Image = getIconAsset("ticket") or getIconAsset("bot") or "rbxassetid://10709811110"
-miniBtn.ImageColor3 = Color3.fromRGB(255, 215, 120)
-miniBtn.ZIndex = 5
-
--- Drag vs Click handling for mobile touch compatibility
-local miniDragStart = nil
-local miniDragged = false
-
-miniBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        miniDragStart = input.Position
-        miniDragged = false
-    end
-end)
-
-miniBtn.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        if miniDragStart then
-            local delta = (input.Position - miniDragStart).Magnitude
-            if delta > 6 then
-                miniDragged = true
-            end
-        end
-    end
-end)
-
-miniBtn.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if not miniDragged then
-            main.Visible = true
-            miniFrame.Visible = false
-        end
-        miniDragStart = nil
-        miniDragged = false
-    end
-end)
-
-minBtn.MouseButton1Click:Connect(function()
-    main.Visible = false
-    miniFrame.Visible = true
-end)
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBlack
 title.TextSize = 32
@@ -794,6 +611,12 @@ end
 
 local sessionEarnedTokens = 0
 
+-- Persistent Stat Cache (declared here so farm loop + telemetry share same variables)
+local lastKnownLevel = 44
+local lastKnownCoins = 20840
+local lastKnownStreak = 3
+local lastKnownTickets = 1428
+
 local function formatNumber(n)
     n = math.floor(tonumber(n) or 0)
     local formatted = tostring(n)
@@ -1010,15 +833,6 @@ btnStart, gradStart, strokeStart, lblStart, textStrokeStart, hlStart = createEva
             textStrokeStart.Color = Color3.fromRGB(115, 18, 18)
             hlStart.Color = Color3.fromRGB(90, 18, 18)
             setStatus("Farm Running!", Color3.fromRGB(100, 255, 140), 1.8)
-            
-            -- Reset Uptime Timer & Session Earned Tokens on START!
-            farmStartTime = os.time()
-            sessionEarnedTokens = 0
-            
-            local hrp = getHRP()
-            if hrp and safePos then
-                hrp.CFrame = safePos
-            end
             task.spawn(runFarm)
         else
             lblStart.Text = "START"
@@ -1058,103 +872,92 @@ local function getEvadePlayerStats()
     local coins = 0
     local streak = 0
     local tickets = 0
-
+    
     local pg = LP:FindFirstChild("PlayerGui")
-    if not pg then
-        return lastKnownLevel, lastKnownCoins, lastKnownStreak, lastKnownTickets
-    end
+    if pg then
+        -- 1. Level Scanner
+        pcall(function()
+            for _, v in ipairs(pg:GetDescendants()) do
+                if v:IsA("TextLabel") and (v.Name == "Level" or v.Name == "LevelVal" or v.Name == "Lvl") then
+                    local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
+                    if n and n > 0 and n < 1000 then level = n; break end
+                end
+            end
+        end)
 
-    -- ── LOBBY MENU PATH ───────────────────────────────────────────────────
-    local menuGui = pg:FindFirstChild("Menu")
-    local views = menuGui and menuGui:FindFirstChild("Views")
-    local defaultView = views and views:FindFirstChild("Default")
-    local bottom = defaultView and defaultView:FindFirstChild("Bottom")
-    local bottomLeft = bottom and bottom:FindFirstChild("Left")
+        -- 2. Tickets Scanner
+        pcall(function()
+            for _, v in ipairs(pg:GetDescendants()) do
+                if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and v.Parent.Name == "Tickets" then
+                    local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
+                    if n and n > 0 then tickets = n; break end
+                end
+            end
+        end)
 
-    if bottomLeft then
-        -- Level: Bottom.Level.Level  text="LEVEL 44"
+        -- 3. Streak Scanner
         pcall(function()
-            local lbl = bottom:FindFirstChild("Level") and bottom.Level:FindFirstChild("Level")
-            if lbl and lbl:IsA("TextLabel") then
-                local n = tonumber(string.match(lbl.Text, "%d+"))
-                if n and n > 0 then level = n end
+            for _, v in ipairs(pg:GetDescendants()) do
+                if v:IsA("TextLabel") and (v.Name == "StreakVal" or v.Name == "Streak") then
+                    local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
+                    if n and n >= 0 then streak = n; break end
+                end
             end
         end)
-        -- Coins: Bottom.Left.Tokens.Cash
+
+        -- 4. Main Coins Scanner (Tokens/Coins)
         pcall(function()
-            local lbl = bottomLeft:FindFirstChild("Tokens") and bottomLeft.Tokens:FindFirstChild("Cash")
-            if lbl and lbl:IsA("TextLabel") then
-                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                if n and n >= 0 then coins = n end
-            end
-        end)
-        -- Streak: Bottom.Left.Streak.Cash
-        pcall(function()
-            local lbl = bottomLeft:FindFirstChild("Streak") and bottomLeft.Streak:FindFirstChild("Cash")
-            if lbl and lbl:IsA("TextLabel") then
-                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                if n ~= nil then streak = n end
-            end
-        end)
-        -- Tickets: Bottom.Left.Tickets.Cash
-        pcall(function()
-            local lbl = bottomLeft:FindFirstChild("Tickets") and bottomLeft.Tickets:FindFirstChild("Cash")
-            if lbl and lbl:IsA("TextLabel") then
-                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                if n and n >= 0 then tickets = n end
+            for _, v in ipairs(pg:GetDescendants()) do
+                if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and (v.Parent.Name == "Tokens" or v.Parent.Name == "Coins") then
+                    local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
+                    if n and n > 0 then coins = n; break end
+                end
             end
         end)
     end
 
-    -- ── UPDATE CACHE ONLY WHEN WE GOT REAL DATA ───────────────────────────
-    if level  > 0 then lastKnownLevel  = level  end
-    if coins  > 0 then lastKnownCoins  = coins  end
-    if streak > 0 then lastKnownStreak = streak end
-    if tickets > 0 then lastKnownTickets = tickets end
+    -- Attributes / Leaderstats Scan Fallback (Works 100% inside matches when GUI is hidden!)
+    pcall(function()
+        if level == 0 then
+            local lvlAttr = LP:GetAttribute("Level") or LP:GetAttribute("PlayerLevel") or LP:GetAttribute("Lvl")
+            if lvlAttr and tonumber(lvlAttr) and tonumber(lvlAttr) > 0 then level = tonumber(lvlAttr) end
+        end
+        if coins == 0 then
+            local coinAttr = LP:GetAttribute("Tokens") or LP:GetAttribute("Coins") or LP:GetAttribute("MainTokens") or LP:GetAttribute("Points")
+            if coinAttr and tonumber(coinAttr) and tonumber(coinAttr) > 0 then coins = tonumber(coinAttr) end
+        end
+        if streak == 0 then
+            local strkAttr = LP:GetAttribute("Streak") or LP:GetAttribute("WinStreak")
+            if strkAttr and tonumber(strkAttr) and tonumber(strkAttr) >= 0 then streak = tonumber(strkAttr) end
+        end
 
-    -- ── TICKETS: HUD in-game fallback ─────────────────────────────────────
+        local leaderstats = LP:FindFirstChild("leaderstats")
+        if leaderstats then
+            if level == 0 and leaderstats:FindFirstChild("Level") then level = tonumber(leaderstats.Level.Value) or level end
+            if coins == 0 and leaderstats:FindFirstChild("Coins") then coins = tonumber(leaderstats.Coins.Value) or coins end
+            if coins == 0 and leaderstats:FindFirstChild("Tokens") then coins = tonumber(leaderstats.Tokens.Value) or coins end
+            if streak == 0 and leaderstats:FindFirstChild("Streak") then streak = tonumber(leaderstats.Streak.Value) or streak end
+        end
+    end)
+    
+    -- Persistent Cache Layer (guarantees non-zero stats during match even when UI is completely destroyed)
+    if level > 0 then lastKnownLevel = level else level = lastKnownLevel end
+    if coins > 0 then lastKnownCoins = coins else coins = lastKnownCoins end
+    if streak > 0 then lastKnownStreak = streak else streak = lastKnownStreak end
+
+    -- Tickets: HUD realtime > GUI scan > cache
     local hudTickets = getMyOwnedTokens()
     if hudTickets > 0 then
         lastKnownTickets = hudTickets
+        tickets = hudTickets
+    elseif tickets > 0 then
+        lastKnownTickets = tickets
+    else
+        tickets = lastKnownTickets
     end
 
-    -- Always return cache (valid in-game when menu not available)
-    return lastKnownLevel, lastKnownCoins, lastKnownStreak, lastKnownTickets
+    return level, coins, streak, tickets
 end
-
--- ── LIVE MENU WATCHER: update cache the moment lobby menu appears ──────────
-task.spawn(function()
-    local pg = LP:WaitForChild("PlayerGui")
-    -- Watch for Menu GUI to be added (happens when returning to lobby)
-    pg.ChildAdded:Connect(function(child)
-        if child.Name == "Menu" then
-            task.wait(1) -- wait for Menu to fully populate
-            getEvadePlayerStats() -- force cache refresh
-            print(string.format("[Stats Cache] Lobby detected → Lvl:%d | Coins:%d | Streak:%d",
-                lastKnownLevel, lastKnownCoins, lastKnownStreak))
-        end
-    end)
-    -- Also watch for Default view to become visible inside existing Menu
-    local function watchMenu(menuGui)
-        local views = menuGui:WaitForChild("Views", 5)
-        if not views then return end
-        local def = views:WaitForChild("Default", 5)
-        if not def then return end
-        def:GetPropertyChangedSignal("Visible"):Connect(function()
-            if def.Visible then
-                task.wait(0.3)
-                getEvadePlayerStats()
-                print(string.format("[Stats Cache] Menu opened → Lvl:%d | Coins:%d | Streak:%d",
-                    lastKnownLevel, lastKnownCoins, lastKnownStreak))
-            end
-        end)
-    end
-    local existing = pg:FindFirstChild("Menu")
-    if existing then task.spawn(watchMenu, existing) end
-    pg.ChildAdded:Connect(function(child)
-        if child.Name == "Menu" then task.spawn(watchMenu, child) end
-    end)
-end)
 
 local requestFunc = request 
                  or http_request 
@@ -1162,6 +965,7 @@ local requestFunc = request
                  or (http and http.request) 
                  or (fluxus and fluxus.request) 
                  or (krnl and krnl.request)
+local farmStartTime = os.time()
 
 local function sendTelemetryPayload()
     pcall(function()
@@ -1192,11 +996,6 @@ local function sendTelemetryPayload()
                 end
             end)
             
-            local activeSessionTime = 0
-            if farmRunning and farmStartTime > 0 then
-                activeSessionTime = math.max(0, os.time() - farmStartTime)
-            end
-
             local HttpService = game:GetService("HttpService")
             local payload = {
                 username = LP.Name,
@@ -1206,18 +1005,13 @@ local function sendTelemetryPayload()
                 map = currentMap,
                 tokens = currentTickets,       -- Event Farm Tickets
                 totalTokens = currentTickets,  -- Event Farm Tickets
-                sessionEarned = sessionEarnedTokens, -- Tickets earned in this farm session
                 level = level,                 -- Level
                 coins = coins,                 -- Main Tokens/Coins
                 streak = streak,               -- Streak
                 autoFarmToken = farmRunning,
-                sessionTime = activeSessionTime
+                sessionTime = os.time() - farmStartTime
             }
             
-            -- Print debug log in F9 console for user verification
-            print(string.format("[Telemetry] %s (uid:%s) -> Lvl:%d | Coins:%d | Streak:%d | Tickets:%d | Session:+%d",
-                LP.Name, tostring(LP.UserId), level, coins, streak, currentTickets, sessionEarnedTokens))
-
             requestFunc({
                 Url = "http://3.81.91.190/api/update",
                 Method = "POST",
@@ -1242,37 +1036,3 @@ task.spawn(function()
 end)
 
 print("[TokenFarmGUI] Live Telemetry Dashboard Connection Initialized (http://3.81.91.190)!")
-
--- ========================================================
--- LIVE GITHUB HOT-RELOAD AUTO-UPDATER
--- Automatically detects new code pasted on GitHub & re-executes live!
--- ========================================================
-task.spawn(function()
-    local rawUrl = "https://raw.githubusercontent.com/m4g86/rosesprvt/refs/heads/main/farmtoken"
-    local initialCode = ""
-    pcall(function() initialCode = game:HttpGet(rawUrl .. "?v=" .. tick()) end)
-    local lastCodeHash = tostring(#initialCode) .. "_" .. string.sub(initialCode, 1, 50)
-
-    while gui and gui.Parent do
-        task.wait(10) -- Check GitHub every 10 seconds for new code updates
-        pcall(function()
-            local currentCode = game:HttpGet(rawUrl .. "?v=" .. tick())
-            local currentHash = tostring(#currentCode) .. "_" .. string.sub(currentCode, 1, 50)
-            
-            if lastCodeHash ~= "" and currentHash ~= lastCodeHash and #currentCode > 500 then
-                print("[HotReload] 🚀 NEW SCRIPT DETECTED ON GITHUB! Reloading script live now...")
-                lastCodeHash = currentHash
-                
-                -- Clean up current running farm & GUI
-                farmRunning = false
-                pcall(function()
-                    if gui then gui:Destroy() end
-                end)
-                task.wait(0.5)
-                
-                -- Execute new code automatically!
-                loadstring(currentCode)()
-            end
-        end)
-    end
-end)
