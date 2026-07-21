@@ -1061,74 +1061,129 @@ local function getEvadePlayerStats()
 
     local pg = LP:FindFirstChild("PlayerGui")
     if pg then
+
+        -- ── LOBBY PATH (Menu GUI exists) ──────────────────────────────────
         local menuGui = pg:FindFirstChild("Menu")
         local defaultView = menuGui
             and menuGui:FindFirstChild("Views")
             and menuGui.Views:FindFirstChild("Default")
+        local bottomLeft = defaultView
+            and defaultView:FindFirstChild("Bottom")
+            and defaultView.Bottom:FindFirstChild("Left")
 
-        -- ── 1. LEVEL ──────────────────────────────────────────────────────
-        -- Exact path: Menu.Views.Default.Bottom.Level.Level  text="LEVEL 44"
-        pcall(function()
-            local lbl = defaultView
-                and defaultView:FindFirstChild("Bottom")
-                and defaultView.Bottom:FindFirstChild("Level")
-                and defaultView.Bottom.Level:FindFirstChild("Level")
-            if lbl and lbl:IsA("TextLabel") then
-                local n = tonumber(string.match(lbl.Text, "%d+"))
-                if n and n > 0 then level = n end
-            end
-        end)
+        if bottomLeft then
+            -- Level: Menu.Views.Default.Bottom.Level.Level  text="LEVEL 44"
+            pcall(function()
+                local lbl = defaultView.Bottom:FindFirstChild("Level")
+                    and defaultView.Bottom.Level:FindFirstChild("Level")
+                if lbl and lbl:IsA("TextLabel") then
+                    local n = tonumber(string.match(lbl.Text, "%d+"))
+                    if n and n > 0 then level = n end
+                end
+            end)
 
-        -- ── 2. MAIN TOKENS (coins) ────────────────────────────────────────
-        -- Exact path: Menu.Views.Default.Bottom.Left.Tokens.Cash  text="21,624"
-        pcall(function()
-            local lbl = defaultView
-                and defaultView:FindFirstChild("Bottom")
-                and defaultView.Bottom:FindFirstChild("Left")
-                and defaultView.Bottom.Left:FindFirstChild("Tokens")
-                and defaultView.Bottom.Left.Tokens:FindFirstChild("Cash")
-            if lbl and lbl:IsA("TextLabel") then
-                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                if n and n >= 0 then coins = n end
-            end
-        end)
+            -- Coins: Menu.Views.Default.Bottom.Left.Tokens.Cash
+            pcall(function()
+                local lbl = bottomLeft:FindFirstChild("Tokens")
+                    and bottomLeft.Tokens:FindFirstChild("Cash")
+                if lbl and lbl:IsA("TextLabel") then
+                    local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                    if n and n >= 0 then coins = n end
+                end
+            end)
 
-        -- ── 3. WIN STREAK ─────────────────────────────────────────────────
-        -- Exact path: Menu.Views.Default.Bottom.Left.Streak.Cash  text="1"
-        pcall(function()
-            local lbl = defaultView
-                and defaultView:FindFirstChild("Bottom")
-                and defaultView.Bottom:FindFirstChild("Left")
-                and defaultView.Bottom.Left:FindFirstChild("Streak")
-                and defaultView.Bottom.Left.Streak:FindFirstChild("Cash")
-            if lbl and lbl:IsA("TextLabel") then
-                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                if n ~= nil then streak = n end
-            end
-        end)
+            -- Streak: Menu.Views.Default.Bottom.Left.Streak.Cash
+            pcall(function()
+                local lbl = bottomLeft:FindFirstChild("Streak")
+                    and bottomLeft.Streak:FindFirstChild("Cash")
+                if lbl and lbl:IsA("TextLabel") then
+                    local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                    if n ~= nil then streak = n end
+                end
+            end)
 
-        -- ── 4. TICKETS ────────────────────────────────────────────────────
-        -- Exact path: Menu.Views.Default.Bottom.Left.Tickets.Cash  text="2,240"
-        -- Also try HUD path: Game.HUD.Tickets.Cash
-        pcall(function()
-            local lbl = defaultView
-                and defaultView:FindFirstChild("Bottom")
-                and defaultView.Bottom:FindFirstChild("Left")
-                and defaultView.Bottom.Left:FindFirstChild("Tickets")
-                and defaultView.Bottom.Left.Tickets:FindFirstChild("Cash")
-            if lbl and lbl:IsA("TextLabel") then
-                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
-                if n and n >= 0 then tickets = n end
-            end
-        end)
+            -- Tickets: Menu.Views.Default.Bottom.Left.Tickets.Cash
+            pcall(function()
+                local lbl = bottomLeft:FindFirstChild("Tickets")
+                    and bottomLeft.Tickets:FindFirstChild("Cash")
+                if lbl and lbl:IsA("TextLabel") then
+                    local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                    if n and n >= 0 then tickets = n end
+                end
+            end)
+        end
+
+        -- ── IN-GAME PATH (Game HUD) ───────────────────────────────────────
+        local gameGui = pg:FindFirstChild("Game")
+        local hud = gameGui and gameGui:FindFirstChild("HUD")
+        local overlay = hud and hud:FindFirstChild("Overlay")
+        local bottomLeftHUD = overlay
+            and overlay:FindFirstChild("CharacterStatus")
+            and overlay.CharacterStatus:FindFirstChild("BottomLeft")
+
+        if bottomLeftHUD then
+            -- Tickets in-game: Game.HUD.Overlay.CharacterStatus.BottomLeft.Tickets.Cash
+            pcall(function()
+                local lbl = bottomLeftHUD:FindFirstChild("Tickets")
+                    and bottomLeftHUD.Tickets:FindFirstChild("Cash")
+                if lbl and lbl:IsA("TextLabel") then
+                    local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                    if n and n >= 0 then tickets = n end
+                end
+            end)
+
+            -- Streak in-game: Game.HUD.Overlay.CharacterStatus.BottomLeft.Attributes.Streak.Cash
+            pcall(function()
+                local attrs = bottomLeftHUD:FindFirstChild("Attributes")
+                local lbl = attrs and attrs:FindFirstChild("Streak")
+                    and attrs.Streak:FindFirstChild("Cash")
+                if lbl and lbl:IsA("TextLabel") then
+                    local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                    if n ~= nil then streak = n end
+                end
+            end)
+        end
+
+        -- ── LEVEL: Leaderboard popup (works in-game & lobby) ─────────────
+        -- Path: Shared.Popups.Leaderboard...ScrollingFrame.Frame.<username>.Level
+        if level == 0 then
+            pcall(function()
+                local leaderboard = pg:FindFirstChild("Shared")
+                    and pg.Shared:FindFirstChild("Popups")
+                    and pg.Shared.Popups:FindFirstChild("Leaderboard")
+                if leaderboard then
+                    -- Navigate to ScrollingFrame
+                    local sf = leaderboard:FindFirstChild("Center")
+                        and leaderboard.Center:FindFirstChild("LeaderboardSet")
+                        and leaderboard.Center.LeaderboardSet:FindFirstChild("PlayerTeam")
+                    sf = sf and sf:FindFirstChild("Frame")
+                        and sf.Frame:FindFirstChild("Frame")
+                        and sf.Frame.Frame:FindFirstChild("ScrollingFrame")
+                    if sf then
+                        -- Find frame matching local player username
+                        local playerFrame = sf:FindFirstChild(LP.Name)
+                        if playerFrame then
+                            local lbl = playerFrame:FindFirstChild("Level")
+                            if lbl and lbl:IsA("TextLabel") then
+                                local n = tonumber(string.match(lbl.Text, "%d+"))
+                                if n and n > 0 then level = n end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+
+        -- ── COINS: only available in lobby, keep last known when in-game ──
+        -- No in-game path found for coins, cache will hold last lobby value
     end
 
     -- ── Persistent Cache Layer ────────────────────────────────────────────
     if level  > 0  then lastKnownLevel  = level  else level  = lastKnownLevel  end
-    if coins  >= 0 then lastKnownCoins  = coins  else coins  = lastKnownCoins  end
+    if coins  >= 0 and coins > 0 then lastKnownCoins = coins else coins = lastKnownCoins end
     if streak >= 0 then lastKnownStreak = streak else streak = lastKnownStreak end
 
-    -- Tickets: prefer HUD realtime read, then menu scan, then cache
+    -- Tickets: prefer HUD realtime read, then scanned value, then cache
     local hudTickets = getMyOwnedTokens()
     if hudTickets > 0 then
         lastKnownTickets = hudTickets
