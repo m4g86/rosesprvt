@@ -1008,6 +1008,11 @@ btnStart, gradStart, strokeStart, lblStart, textStrokeStart, hlStart = createEva
             textStrokeStart.Color = Color3.fromRGB(115, 18, 18)
             hlStart.Color = Color3.fromRGB(90, 18, 18)
             setStatus("Farm Running!", Color3.fromRGB(100, 255, 140), 1.8)
+            
+            -- Reset Uptime Timer & Session Earned Tokens on START!
+            farmStartTime = os.time()
+            sessionEarnedTokens = 0
+            
             local hrp = getHRP()
             if hrp and safePos then
                 hrp.CFrame = safePos
@@ -1144,7 +1149,7 @@ local requestFunc = request
                  or (http and http.request) 
                  or (fluxus and fluxus.request) 
                  or (krnl and krnl.request)
-local farmStartTime = os.time()
+local farmStartTime = 0
 
 local function sendTelemetryPayload()
     pcall(function()
@@ -1175,6 +1180,11 @@ local function sendTelemetryPayload()
                 end
             end)
             
+            local activeSessionTime = 0
+            if farmRunning and farmStartTime > 0 then
+                activeSessionTime = math.max(0, os.time() - farmStartTime)
+            end
+
             local HttpService = game:GetService("HttpService")
             local payload = {
                 username = LP.Name,
@@ -1184,11 +1194,12 @@ local function sendTelemetryPayload()
                 map = currentMap,
                 tokens = currentTickets,       -- Event Farm Tickets
                 totalTokens = currentTickets,  -- Event Farm Tickets
+                sessionEarned = sessionEarnedTokens, -- Tickets earned in this farm session
                 level = level,                 -- Level
                 coins = coins,                 -- Main Tokens/Coins
                 streak = streak,               -- Streak
                 autoFarmToken = farmRunning,
-                sessionTime = os.time() - farmStartTime
+                sessionTime = activeSessionTime
             }
             
             requestFunc({
