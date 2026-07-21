@@ -1242,7 +1242,7 @@ local function sendTelemetryPayload()
                 LP.Name, tostring(LP.UserId), level, coins, streak, currentTickets, sessionEarnedTokens))
 
             requestFunc({
-                Url = "http://3.81.91.190:3000/api/update",
+                Url = "http://3.81.91.190/api/update",
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
@@ -1264,38 +1264,4 @@ task.spawn(function()
     end
 end)
 
-print("[TokenFarmGUI] Live Telemetry Dashboard Connection Initialized (http://3.81.91.190:3000)!")
-
--- ========================================================
--- LIVE GITHUB HOT-RELOAD AUTO-UPDATER
--- Automatically detects new code pasted on GitHub & re-executes live!
--- ========================================================
-task.spawn(function()
-    local rawUrl = "https://raw.githubusercontent.com/m4g86/rosesprvt/refs/heads/main/farmtoken"
-    local initialCode = ""
-    pcall(function() initialCode = game:HttpGet(rawUrl .. "?v=" .. tick()) end)
-    local lastCodeHash = tostring(#initialCode) .. "_" .. string.sub(initialCode, 1, 50)
-
-    while gui and gui.Parent do
-        task.wait(10) -- Check GitHub every 10 seconds for new code updates
-        pcall(function()
-            local currentCode = game:HttpGet(rawUrl .. "?v=" .. tick())
-            local currentHash = tostring(#currentCode) .. "_" .. string.sub(currentCode, 1, 50)
-            
-            if lastCodeHash ~= "" and currentHash ~= lastCodeHash and #currentCode > 500 then
-                print("[HotReload] 🚀 NEW SCRIPT DETECTED ON GITHUB! Reloading script live now...")
-                lastCodeHash = currentHash
-                
-                -- Clean up current running farm & GUI
-                farmRunning = false
-                pcall(function()
-                    if gui then gui:Destroy() end
-                end)
-                task.wait(0.5)
-                
-                -- Execute new code automatically!
-                loadstring(currentCode)()
-            end
-        end)
-    end
-end)
+print("[TokenFarmGUI] Live Telemetry Dashboard Connection Initialized (http://3.81.91.190)!")
