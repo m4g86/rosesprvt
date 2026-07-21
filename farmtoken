@@ -1067,25 +1067,54 @@ local function getEvadePlayerStats()
     
     local pg = LP:FindFirstChild("PlayerGui")
     if pg then
-        -- 1. Exact Local Player Level Scanner (Text Format: 'LEVEL 44')
+        -- 1. Exact Local Player Level Scanner (Strictly Excludes Battlepass & Leaderboard UIs)
         pcall(function()
-            for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Text then
-                    local lvlNum = string.match(v.Text, "^LEVEL%s+(%d+)$") or string.match(v.Text, "^Level%s+(%d+)$")
-                    if lvlNum then
-                        local n = tonumber(lvlNum)
-                        if n and n > 0 then level = n; break end
+            local menuObj = pg:FindFirstChild("Menu")
+            if menuObj then
+                -- Direct Path Check: Menu.Frame.Level.Level or Menu.Frame.Profile.Level
+                local frame = menuObj:FindFirstChild("Frame") or menuObj
+                local levelContainer = frame:FindFirstChild("Level") or frame:FindFirstChild("Profile")
+                if levelContainer then
+                    local lvlLabel = levelContainer:FindFirstChild("Level")
+                    if lvlLabel and lvlLabel:IsA("TextLabel") and lvlLabel.Text then
+                        local n = tonumber(string.match(lvlLabel.Text, "%d+"))
+                        if n and n > 0 then level = n end
+                    end
+                end
+                
+                -- Fallback scan excluding Battlepass, Leaderboard & Event UIs
+                if level == 0 then
+                    for _, v in ipairs(menuObj:GetDescendants()) do
+                        local pName = v.Parent and v.Parent.Name or ""
+                        local gpName = (v.Parent and v.Parent.Parent) and v.Parent.Parent.Name or ""
+                        if not string.find(pName, "Battlepass") and not string.find(gpName, "Battlepass")
+                           and not string.find(pName, "Leader") and not string.find(gpName, "Leader")
+                           and not string.find(pName, "Event") and not string.find(gpName, "Event")
+                           and not string.find(pName, "Shop") and not string.find(gpName, "Shop") then
+                            if v:IsA("TextLabel") and v.Name == "Level" and pName == "Level" then
+                                local n = tonumber(string.match(v.Text, "%d+"))
+                                if n and n > 0 then level = n; break end
+                            end
+                        end
                     end
                 end
             end
         end)
 
-        -- 2. Exact Win Streak Scanner (Name: "Cash", Parent: "Streak")
+        -- 2. Exact Local Player Win Streak Scanner (Strictly Excludes Event UIs)
         pcall(function()
-            for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and (v.Parent.Name == "Streak" or v.Parent.Name == "WinStreak") then
-                    local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
-                    if n ~= nil then streak = n; break end
+            local menuObj = pg:FindFirstChild("Menu")
+            if menuObj then
+                for _, v in ipairs(menuObj:GetDescendants()) do
+                    local pName = v.Parent and v.Parent.Name or ""
+                    local gpName = (v.Parent and v.Parent.Parent) and v.Parent.Parent.Name or ""
+                    if not string.find(pName, "Battlepass") and not string.find(gpName, "Battlepass")
+                       and not string.find(pName, "Event") and not string.find(gpName, "Event") then
+                        if v:IsA("TextLabel") and v.Name == "Cash" and (pName == "Streak" or pName == "WinStreak") then
+                            local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
+                            if n ~= nil then streak = n; break end
+                        end
+                    end
                 end
             end
         end)
