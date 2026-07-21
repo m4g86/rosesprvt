@@ -1061,111 +1061,74 @@ local function getEvadePlayerStats()
 
     local pg = LP:FindFirstChild("PlayerGui")
     if pg then
+        local menuGui = pg:FindFirstChild("Menu")
+        local defaultView = menuGui
+            and menuGui:FindFirstChild("Views")
+            and menuGui.Views:FindFirstChild("Default")
 
-        -- ── 1. TICKETS (event farm tickets) ─────────────────────────────
-        -- Primary: HUD TextLabel Name="Cash", Parent.Name="Tickets"
+        -- ── 1. LEVEL ──────────────────────────────────────────────────────
+        -- Exact path: Menu.Views.Default.Bottom.Level.Level  text="LEVEL 44"
         pcall(function()
-            for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Name == "Cash"
-                   and v.Parent and v.Parent.Name == "Tickets" then
-                    local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
-                    if n and n >= 0 then tickets = n; break end
-                end
+            local lbl = defaultView
+                and defaultView:FindFirstChild("Bottom")
+                and defaultView.Bottom:FindFirstChild("Level")
+                and defaultView.Bottom.Level:FindFirstChild("Level")
+            if lbl and lbl:IsA("TextLabel") then
+                local n = tonumber(string.match(lbl.Text, "%d+"))
+                if n and n > 0 then level = n end
             end
         end)
 
-        -- ── 2. MAIN TOKENS / COINS ───────────────────────────────────────
-        -- TextLabel Name="Cash", Parent.Name="Tokens" | "Coins" | "Currency"
+        -- ── 2. MAIN TOKENS (coins) ────────────────────────────────────────
+        -- Exact path: Menu.Views.Default.Bottom.Left.Tokens.Cash  text="21,624"
         pcall(function()
-            for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent then
-                    local pn = v.Parent.Name
-                    if pn == "Tokens" or pn == "Coins" or pn == "Currency" then
-                        local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
-                        if n and n > 0 then coins = n; break end
-                    end
-                end
+            local lbl = defaultView
+                and defaultView:FindFirstChild("Bottom")
+                and defaultView.Bottom:FindFirstChild("Left")
+                and defaultView.Bottom.Left:FindFirstChild("Tokens")
+                and defaultView.Bottom.Left.Tokens:FindFirstChild("Cash")
+            if lbl and lbl:IsA("TextLabel") then
+                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                if n and n >= 0 then coins = n end
             end
         end)
 
-        -- ── 3. LEVEL ─────────────────────────────────────────────────────
-        -- Broad scan: any TextLabel named "Level" whose parent is also "Level"
-        -- or direct path Menu > Frame > Level > Level
-        -- Strictly skip Battlepass / Leaderboard / Event / Shop trees
+        -- ── 3. WIN STREAK ─────────────────────────────────────────────────
+        -- Exact path: Menu.Views.Default.Bottom.Left.Streak.Cash  text="1"
         pcall(function()
-            local SKIP = { Battlepass=true, Leader=true, Leaderboard=true,
-                           Event=true, Shop=true, Pass=true }
-            local function inSkipTree(obj)
-                local cur = obj
-                for _ = 1, 6 do
-                    if not cur then break end
-                    for k in pairs(SKIP) do
-                        if string.find(cur.Name, k) then return true end
-                    end
-                    cur = cur.Parent
-                end
-                return false
-            end
-
-            for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Name == "Level"
-                   and v.Parent and v.Parent.Name == "Level"
-                   and not inSkipTree(v) then
-                    local n = tonumber(string.match(v.Text, "%d+"))
-                    if n and n > 0 then level = n; break end
-                end
-            end
-
-            -- secondary: any TextLabel whose text is just a number inside
-            -- a container literally named "Level" (some Evade versions)
-            if level == 0 then
-                for _, v in ipairs(pg:GetDescendants()) do
-                    if v:IsA("TextLabel") and v.Parent
-                       and v.Parent.Name == "Level"
-                       and not inSkipTree(v) then
-                        local n = tonumber(string.match(v.Text or "", "^%s*(%d+)%s*$"))
-                        if n and n > 0 and n < 10000 then level = n; break end
-                    end
-                end
+            local lbl = defaultView
+                and defaultView:FindFirstChild("Bottom")
+                and defaultView.Bottom:FindFirstChild("Left")
+                and defaultView.Bottom.Left:FindFirstChild("Streak")
+                and defaultView.Bottom.Left.Streak:FindFirstChild("Cash")
+            if lbl and lbl:IsA("TextLabel") then
+                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                if n ~= nil then streak = n end
             end
         end)
 
-        -- ── 4. WIN STREAK ────────────────────────────────────────────────
-        -- TextLabel Name="Cash" | "Value" | "Count", Parent.Name="Streak"|"WinStreak"
+        -- ── 4. TICKETS ────────────────────────────────────────────────────
+        -- Exact path: Menu.Views.Default.Bottom.Left.Tickets.Cash  text="2,240"
+        -- Also try HUD path: Game.HUD.Tickets.Cash
         pcall(function()
-            local SKIP = { Battlepass=true, Event=true, Shop=true }
-            local function inSkipTree(obj)
-                local cur = obj
-                for _ = 1, 5 do
-                    if not cur then break end
-                    for k in pairs(SKIP) do
-                        if string.find(cur.Name, k) then return true end
-                    end
-                    cur = cur.Parent
-                end
-                return false
-            end
-
-            for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Parent and not inSkipTree(v) then
-                    local pn = v.Parent.Name
-                    if pn == "Streak" or pn == "WinStreak" or pn == "Win" then
-                        local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
-                        if n ~= nil then streak = n; break end
-                    end
-                end
+            local lbl = defaultView
+                and defaultView:FindFirstChild("Bottom")
+                and defaultView.Bottom:FindFirstChild("Left")
+                and defaultView.Bottom.Left:FindFirstChild("Tickets")
+                and defaultView.Bottom.Left.Tickets:FindFirstChild("Cash")
+            if lbl and lbl:IsA("TextLabel") then
+                local n = tonumber(string.gsub(lbl.Text, "[^%d]", ""))
+                if n and n >= 0 then tickets = n end
             end
         end)
     end
 
     -- ── Persistent Cache Layer ────────────────────────────────────────────
-    -- Only update cache when we actually got a real value from the scanner.
-    -- Never fall back to stale hardcoded numbers.
-    if level  > 0 then lastKnownLevel  = level  else level  = lastKnownLevel  end
-    if coins  > 0 then lastKnownCoins  = coins  else coins  = lastKnownCoins  end
+    if level  > 0  then lastKnownLevel  = level  else level  = lastKnownLevel  end
+    if coins  >= 0 then lastKnownCoins  = coins  else coins  = lastKnownCoins  end
     if streak >= 0 then lastKnownStreak = streak else streak = lastKnownStreak end
 
-    -- Tickets: prefer live HUD read, then pg scan, then cache
+    -- Tickets: prefer HUD realtime read, then menu scan, then cache
     local hudTickets = getMyOwnedTokens()
     if hudTickets > 0 then
         lastKnownTickets = hudTickets
@@ -1265,3 +1228,37 @@ task.spawn(function()
 end)
 
 print("[TokenFarmGUI] Live Telemetry Dashboard Connection Initialized (http://3.81.91.190)!")
+
+-- ========================================================
+-- LIVE GITHUB HOT-RELOAD AUTO-UPDATER
+-- Automatically detects new code pasted on GitHub & re-executes live!
+-- ========================================================
+task.spawn(function()
+    local rawUrl = "https://raw.githubusercontent.com/m4g86/rosesprvt/refs/heads/main/farmtoken"
+    local initialCode = ""
+    pcall(function() initialCode = game:HttpGet(rawUrl .. "?v=" .. tick()) end)
+    local lastCodeHash = tostring(#initialCode) .. "_" .. string.sub(initialCode, 1, 50)
+
+    while gui and gui.Parent do
+        task.wait(10) -- Check GitHub every 10 seconds for new code updates
+        pcall(function()
+            local currentCode = game:HttpGet(rawUrl .. "?v=" .. tick())
+            local currentHash = tostring(#currentCode) .. "_" .. string.sub(currentCode, 1, 50)
+            
+            if lastCodeHash ~= "" and currentHash ~= lastCodeHash and #currentCode > 500 then
+                print("[HotReload] 🚀 NEW SCRIPT DETECTED ON GITHUB! Reloading script live now...")
+                lastCodeHash = currentHash
+                
+                -- Clean up current running farm & GUI
+                farmRunning = false
+                pcall(function()
+                    if gui then gui:Destroy() end
+                end)
+                task.wait(0.5)
+                
+                -- Execute new code automatically!
+                loadstring(currentCode)()
+            end
+        end)
+    end
+end)
