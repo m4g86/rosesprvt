@@ -1067,12 +1067,18 @@ local function getEvadePlayerStats()
     
     local pg = LP:FindFirstChild("PlayerGui")
     if pg then
-        -- 1. Exact Level Scanner (Name: "Level", Parent: "Level")
+        -- 1. Robust Level Scanner (Matches "LEVEL 44" text or Level parent)
         pcall(function()
             for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Name == "Level" and v.Parent and v.Parent.Name == "Level" then
-                    local n = tonumber(string.match(v.Text, "%d+"))
-                    if n and n > 0 then level = n; break end
+                if v:IsA("TextLabel") and v.Text then
+                    local matchNum = string.match(v.Text, "^LEVEL%s+(%d+)$") or string.match(v.Text, "^Level%s+(%d+)$") or string.match(v.Text, "^Lvl%s+(%d+)$")
+                    if matchNum then
+                        local n = tonumber(matchNum)
+                        if n and n > 0 then level = n; break end
+                    elseif v.Name == "Level" and v.Parent and v.Parent.Name == "Level" then
+                        local n = tonumber(string.match(v.Text, "%d+"))
+                        if n and n > 0 then level = n; break end
+                    end
                 end
             end
         end)
@@ -1080,7 +1086,7 @@ local function getEvadePlayerStats()
         -- 2. Exact Win Streak Scanner (Name: "Cash", Parent: "Streak")
         pcall(function()
             for _, v in ipairs(pg:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and v.Parent.Name == "Streak" then
+                if v:IsA("TextLabel") and v.Name == "Cash" and v.Parent and (v.Parent.Name == "Streak" or v.Parent.Name == "WinStreak") then
                     local n = tonumber(string.gsub(v.Text, "[^%d]", ""))
                     if n and n >= 0 then streak = n; break end
                 end
