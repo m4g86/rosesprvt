@@ -217,14 +217,14 @@ title.TextSize = 32
 -- Minimize Button in Header (3D Glass Bevel Button matching Evade Style)
 local minBtn = Instance.new("TextButton", main)
 minBtn.Name = "MinimizeButton"
-minBtn.Size = UDim2.new(0, 24, 0, 22)
-minBtn.Position = UDim2.new(1, -34, 0, 10)
+minBtn.Size = UDim2.new(0, 26, 0, 26)
+minBtn.Position = UDim2.new(1, -37, 0, 11)
 minBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 minBtn.Text = ""
 minBtn.AutoButtonColor = false
 minBtn.Active = true
 minBtn.ZIndex = 15
-Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 7)
 
 local minGrad = Instance.new("UIGradient", minBtn)
 minGrad.Color = ColorSequence.new({
@@ -236,34 +236,68 @@ minGrad.Rotation = 90
 local minOuterStroke = Instance.new("UIStroke", minBtn)
 minOuterStroke.Color = Color3.fromRGB(12, 16, 24)
 minOuterStroke.Thickness = 1.2
+minOuterStroke.LineJoinMode = Enum.LineJoinMode.Round
+minOuterStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local minInnerHighlight = Instance.new("Frame", minBtn)
+minInnerHighlight.Name = "InnerHighlight"
 minInnerHighlight.AnchorPoint = Vector2.new(0.5, 0.5)
 minInnerHighlight.Position = UDim2.new(0.5, 0, 0.5, 0)
 minInnerHighlight.Size = UDim2.new(1, -4, 1, -4)
 minInnerHighlight.BackgroundTransparency = 1
-Instance.new("UICorner", minInnerHighlight).CornerRadius = UDim.new(0, 4)
+minInnerHighlight.BorderSizePixel = 0
+minInnerHighlight.ZIndex = 16
+Instance.new("UICorner", minInnerHighlight).CornerRadius = UDim.new(0, 5)
 
 local minInnerStroke = Instance.new("UIStroke", minInnerHighlight)
-minInnerStroke.Color = Color3.fromRGB(110, 140, 180)
+minInnerStroke.Color = Color3.fromRGB(135, 145, 160)
 minInnerStroke.Thickness = 1.0
-minInnerStroke.Transparency = 0.35
+minInnerStroke.Transparency = 0.15
+minInnerStroke.LineJoinMode = Enum.LineJoinMode.Round
+minInnerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local minImg = Instance.new("ImageLabel", minBtn)
+minImg.AnchorPoint = Vector2.new(0.5, 0.5)
+minImg.Position = UDim2.new(0.5, 0, 0.5, 0)
 minImg.Size = UDim2.new(0, 14, 0, 14)
-minImg.Position = UDim2.new(0.5, -7, 0.5, -7)
 minImg.BackgroundTransparency = 1
+minImg.ScaleType = Enum.ScaleType.Fit
 minImg.Image = getIconAsset("minus") or getIconAsset("minimize-2") or "rbxassetid://10734930886"
-minImg.ImageColor3 = Color3.fromRGB(240, 245, 255)
-minImg.ZIndex = 16
+minImg.ImageColor3 = Color3.fromRGB(255, 255, 255)
+minImg.ZIndex = 17
 
--- Floating Bevel Mini Icon (Shown when GUI is Minimized)
+-- Universal Mobile Touch & PC Mouse Press Animations for Minimize Button (Pure Movement, No Glow)
+local tInfoHoverMin = TweenInfo.new(0.16, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+local tInfoPressMin = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+minBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        TweenService:Create(minBtn, tInfoPressMin, { Position = UDim2.new(1, -37, 0, 13) }):Play()
+    end
+end)
+
+minBtn.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        TweenService:Create(minBtn, tInfoHoverMin, { Position = UDim2.new(1, -37, 0, 11) }):Play()
+    end
+end)
+
+minBtn.MouseEnter:Connect(function()
+    TweenService:Create(minBtn, tInfoHoverMin, { Position = UDim2.new(1, -37, 0, 9) }):Play()
+end)
+
+minBtn.MouseLeave:Connect(function()
+    TweenService:Create(minBtn, tInfoHoverMin, { Position = UDim2.new(1, -37, 0, 11) }):Play()
+end)
+
+-- Floating Bevel Mini Icon (Shown when GUI is Minimized - Exact 3D Slate Bevel Theme)
 local miniFrame = Instance.new("Frame", gui)
 miniFrame.Name = "EvadeMiniIcon"
 miniFrame.Size = UDim2.new(0, 46, 0, 46)
-miniFrame.Position = UDim2.new(0, 15, 0.5, -23)
-miniFrame.BackgroundColor3 = Color3.fromRGB(42, 45, 50)
-miniFrame.BackgroundTransparency = 0.25
+miniFrame.AnchorPoint = Vector2.new(0.5, 0.5) -- 100% DEAD-CENTERED SCALING FROM ALL SIDES!
+miniFrame.Position = UDim2.new(0, 38, 0.5, 0)
+miniFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+miniFrame.BackgroundTransparency = 0
 miniFrame.BorderSizePixel = 0
 miniFrame.Active = true
 miniFrame.Draggable = true
@@ -277,72 +311,200 @@ uiScale:GetPropertyChangedSignal("Scale"):Connect(function()
     miniScale.Scale = uiScale.Scale
 end)
 
+-- Exact 3D Slate Bevel Vertical Gradient matching Evade Action Buttons
 local miniGrad = Instance.new("UIGradient", miniFrame)
 miniGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(65, 72, 85)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 34, 42))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(78, 96, 122)), -- Soft Slate Grey Top
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 34, 46))   -- Dark Charcoal Bottom
 })
 miniGrad.Rotation = 90
 
+-- 1. Outer Dark Border Stroke
 local miniOuterStroke = Instance.new("UIStroke", miniFrame)
-miniOuterStroke.Color = Color3.fromRGB(20, 22, 26)
+miniOuterStroke.Color = Color3.fromRGB(12, 16, 24)
 miniOuterStroke.Thickness = 1.4
+miniOuterStroke.LineJoinMode = Enum.LineJoinMode.Round
+miniOuterStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
+-- 2. Inner Inset Highlight Line (Symmetrical 3px Inset Rim)
 local miniInnerBorder = Instance.new("Frame", miniFrame)
+miniInnerBorder.Name = "InnerHighlight"
 miniInnerBorder.AnchorPoint = Vector2.new(0.5, 0.5)
 miniInnerBorder.Position = UDim2.new(0.5, 0, 0.5, 0)
 miniInnerBorder.Size = UDim2.new(1, -6, 1, -6)
 miniInnerBorder.BackgroundTransparency = 1
+miniInnerBorder.BorderSizePixel = 0
+miniInnerBorder.ZIndex = 6
 Instance.new("UICorner", miniInnerBorder).CornerRadius = UDim.new(0, 9)
 
 local miniInnerStroke = Instance.new("UIStroke", miniInnerBorder)
-miniInnerStroke.Color = Color3.fromRGB(140, 150, 165)
+miniInnerStroke.Color = Color3.fromRGB(135, 145, 160)
 miniInnerStroke.Thickness = 1.2
-miniInnerStroke.Transparency = 0.40
+miniInnerStroke.Transparency = 0.15
+miniInnerStroke.LineJoinMode = Enum.LineJoinMode.Round
+miniInnerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
+-- 3. Centered Ticket Icon Image with White-to-Silver Metallic Gradient Tint
+local miniIconImg = Instance.new("ImageLabel", miniFrame)
+miniIconImg.Name = "TicketIcon"
+miniIconImg.AnchorPoint = Vector2.new(0.5, 0.5)
+miniIconImg.Position = UDim2.new(0.5, 0, 0.5, 0)
+miniIconImg.Size = UDim2.new(0, 22, 0, 22)
+miniIconImg.BackgroundTransparency = 1
+miniIconImg.ScaleType = Enum.ScaleType.Fit
+miniIconImg.Image = getIconAsset("ticket") or getIconAsset("bot") or "rbxassetid://10709811110"
+miniIconImg.ImageColor3 = Color3.fromRGB(255, 255, 255)
+miniIconImg.ZIndex = 8
+
+local ticketGrad = Instance.new("UIGradient", miniIconImg)
+ticketGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), -- Bright White Top
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 195, 215))  -- Soft Metallic Silver Bottom
+})
+ticketGrad.Rotation = 90
+
+-- 4. Transparent Clickable Touch Button with Smooth Drag Shrink & Jelly Release Bounce
 local miniBtn = Instance.new("ImageButton", miniFrame)
+miniBtn.Name = "MiniButton"
 miniBtn.Size = UDim2.new(1, 0, 1, 0)
 miniBtn.BackgroundTransparency = 1
-miniBtn.Image = getIconAsset("ticket") or getIconAsset("bot") or "rbxassetid://10709811110"
-miniBtn.ImageColor3 = Color3.fromRGB(255, 215, 120)
-miniBtn.ZIndex = 5
+miniBtn.ZIndex = 10
 
--- Drag vs Click handling for mobile touch compatibility
-local miniDragStart = nil
-local miniDragged = false
+-- Universal Touch & Mouse Drag vs Click handling
+local isDraggingMini = false
+local dragStartMini, startPosMini
+local miniHasMoved = false
+
+-- Multi-Stage Fluid Jelly Oscillation Tweens (Compress 0.85x -> Pop 1.14x -> Ripple 0.96x -> Settle 1.0x)
+local tJellySquish = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local tJellyPop1   = TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local tJellyDip2   = TweenInfo.new(0.10, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+local tJellyRest3  = TweenInfo.new(0.08, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+
+local function playJellyReleaseBounce(onComplete)
+    local tw1 = TweenService:Create(miniScale, tJellyPop1, { Scale = uiScale.Scale * 1.14 })
+    tw1:Play()
+    tw1.Completed:Connect(function()
+        local tw2 = TweenService:Create(miniScale, tJellyDip2, { Scale = uiScale.Scale * 0.96 })
+        tw2:Play()
+        tw2.Completed:Connect(function()
+            local tw3 = TweenService:Create(miniScale, tJellyRest3, { Scale = uiScale.Scale })
+            tw3:Play()
+            if onComplete then
+                tw3.Completed:Connect(onComplete)
+            end
+        end)
+    end)
+end
 
 miniBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        miniDragStart = input.Position
-        miniDragged = false
+        isDraggingMini = true
+        dragStartMini = input.Position
+        startPosMini = miniFrame.Position
+        miniHasMoved = false
+        
+        -- Symmetrical Dead-Centered Compress (0.85x)
+        TweenService:Create(miniScale, tJellySquish, { Scale = uiScale.Scale * 0.85 }):Play()
     end
 end)
 
-miniBtn.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        if miniDragStart then
-            local delta = (input.Position - miniDragStart).Magnitude
-            if delta > 6 then
-                miniDragged = true
-            end
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if isDraggingMini and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartMini
+        if delta.Magnitude > 8 then
+            miniHasMoved = true
         end
+        miniFrame.Position = UDim2.new(
+            startPosMini.X.Scale,
+            startPosMini.X.Offset + delta.X,
+            startPosMini.Y.Scale,
+            startPosMini.Y.Offset + delta.Y
+        )
     end
 end)
+
+local isAnimatingMainGui = false
+
+local function openMainGuiAnimated()
+    if isAnimatingMainGui then return end
+    isAnimatingMainGui = true
+    main.Visible = true
+    miniFrame.Visible = false
+    
+    local currentScale = uiScale.Scale
+    uiScale.Scale = currentScale * 0.80
+    
+    -- Phase 1: Elastic pop expansion to 1.04x (0.22s)
+    local twOpen = TweenService:Create(uiScale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = currentScale * 1.04 })
+    twOpen:Play()
+    twOpen.Completed:Connect(function()
+        -- Phase 2: Gentle spring settle back to 1.00x (0.12s)
+        local twRest = TweenService:Create(uiScale, TweenInfo.new(0.12, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { Scale = currentScale })
+        twRest:Play()
+        twRest.Completed:Connect(function()
+            isAnimatingMainGui = false
+        end)
+    end)
+end
+
+local function closeMainGuiAnimated()
+    if isAnimatingMainGui then return end
+    isAnimatingMainGui = true
+    
+    local currentScale = uiScale.Scale
+    -- Stage 1: Gentle initial pop stretch (1.03x, 0.09s)
+    local twPop = TweenService:Create(uiScale, TweenInfo.new(0.09, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { Scale = currentScale * 1.03 })
+    twPop:Play()
+    twPop.Completed:Connect(function()
+        -- Stage 2: Smooth Elastic Back.In collapse shrink down to 0.72x (0.20s)
+        local twShrink = TweenService:Create(uiScale, TweenInfo.new(0.20, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Scale = currentScale * 0.72 })
+        twShrink:Play()
+        twShrink.Completed:Connect(function()
+            main.Visible = false
+            miniFrame.Visible = true
+            uiScale.Scale = currentScale
+            isAnimatingMainGui = false
+            
+            playJellyReleaseBounce(nil)
+        end)
+    end)
+end
 
 miniBtn.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if not miniDragged then
-            main.Visible = true
-            miniFrame.Visible = false
+        isDraggingMini = false
+        
+        if miniHasMoved then
+            -- Dragged across screen -> Play Jelly Bounce & STAY MINIMIZED at new position!
+            playJellyReleaseBounce(nil)
+        else
+            -- Stationary Tap / Click -> Animated Jelly Open Main GUI!
+            openMainGuiAnimated()
         end
-        miniDragStart = nil
-        miniDragged = false
+    end
+end)
+
+miniBtn.MouseEnter:Connect(function()
+    if not isDraggingMini then
+        TweenService:Create(miniScale, tJellySquish, { Scale = uiScale.Scale * 1.04 }):Play()
+    end
+end)
+
+miniBtn.MouseLeave:Connect(function()
+    if not isDraggingMini then
+        TweenService:Create(miniScale, tJellyRest3, { Scale = uiScale.Scale }):Play()
     end
 end)
 
 minBtn.MouseButton1Click:Connect(function()
-    main.Visible = false
-    miniFrame.Visible = true
+    closeMainGuiAnimated()
+end)
+
+-- Initial Animated Open on Script Execution
+task.spawn(function()
+    task.wait(0.05)
+    openMainGuiAnimated()
 end)
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBlack
@@ -1222,6 +1384,62 @@ task.spawn(function()
     while gui and gui.Parent do
         task.wait(3)
         sendTelemetryPayload()
+    end
+end)
+
+-- ========================================================
+-- LIVE NEXTBOT SKY PLATFORM DODGER LOOP (AFK PROTECTOR)
+-- ========================================================
+task.spawn(function()
+    while gui and gui.Parent do
+        if farmRunning then
+            local hrp = getHRP()
+            if hrp then
+                local platform = Workspace:FindFirstChild("EvadeAFKSkyPlatform")
+                if platform then
+                    -- Check if player is currently resting on the platform (not collecting)
+                    local isResting = (hrp.Position - platform.Position).Magnitude < 30
+                    if isResting then
+                        local playersFolder = Workspace:FindFirstChild("Players")
+                        local nextbotNear = false
+                        if playersFolder then
+                            for _, obj in ipairs(playersFolder:GetChildren()) do
+                                if obj:IsA("Model") and obj:GetAttribute("AI") == true then
+                                    local nextbotRoot = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("HRP")
+                                    if nextbotRoot then
+                                        local distance = (hrp.Position - nextbotRoot.Position).Magnitude
+                                        if distance < 45 then
+                                            nextbotNear = true
+                                            break
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        
+                        if nextbotNear then
+                            -- Perform Dodge! (Local circle shift 60-100 studs)
+                            local currentPos = platform.Position
+                            local angle = math.random() * math.pi * 2
+                            local distance = math.random(60, 100)
+                            local offsetX = math.cos(angle) * distance
+                            local offsetZ = math.sin(angle) * distance
+                            local newPos = Vector3.new(currentPos.X + offsetX, currentPos.Y, currentPos.Z + offsetZ)
+                            
+                            platform.Position = newPos
+                            safePos = CFrame.new(newPos + Vector3.new(0, 4, 0))
+                            hrp.CFrame = safePos
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            
+                            pcall(function()
+                                setStatus("Nextbot Dodged!", Color3.fromRGB(255, 100, 100), 2)
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.25) -- Check every 250ms
     end
 end)
 
